@@ -1,13 +1,13 @@
 #ifndef _USER_CONFIG_H_
 #define _USER_CONFIG_H_
 
-#define LOCATION "home"
-#define GATEWAY_NAME "BLETracker"
+#define LOCATION "home40"
+#define GATEWAY_NAME "ESP32BLETrak"
 
 // Wi-Fi credentials
 // NOTE: If you set them the WiFi credential AcessPoint Mode will not work and BLETracker will connect always to this WiFi
-#define WIFI_SSID     ""
-#define WIFI_PASSWORD ""
+#define WIFI_SSID     "NO-THO-40"
+#define WIFI_PASSWORD "4d8233a767"
 
 /*Set to false to assign manually an IP to the BLETracker*/
 #define USE_DHCP true
@@ -20,16 +20,21 @@
 #endif
 
 // MQTT
+#define USE_MQTT false
+
 #define MQTT_USERNAME     "YOUR_MQTT_USERNAME"
 #define MQTT_PASSWORD     "YOUR_MQTT_PASSWORD"
 #define MQTT_SERVER       "YOUR_MQTT_SERVER_IP_ADDRESS"
 #define MQTT_SERVER_PORT  1883
 
+// WEBSERVER
+#define WIFIAP_NAME "ESP32_BLETRACKER"
+
 #define WEBSERVER_USER        "admin"
 #define WEBSERVER_PASSWORD    "admin"
 
 //Set to true if you want track only the devices in the white list
-#define ENABLE_BLE_TRACKER_WHITELIST true
+#define ENABLE_BLE_TRACKER_WHITELIST false
 
 //List of known devices you want track
 //Each entry is in the format {"MAC-ADDRESS", read-battery, "Description"} i.e.{"A6B5C4D3E2F1", true, "My iTag"}

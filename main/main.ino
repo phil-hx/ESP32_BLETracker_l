@@ -7,6 +7,8 @@
 
 #include "config.h"
 
+#include "firmwarever.h"
+#include <EEPROM.h>
 #define CONFIG_ESP32_DEBUG_OCDAWARE 1
 
 #include "esp_system.h"
@@ -35,6 +37,7 @@
 MyRWMutex trackedDevicesMutex;
 std::vector<BLETrackedDevice> BLETrackedDevices;
 std::map<std::string, bool> FastDiscovery;
+int too_far_devices = 0;
 
 BLEScan *pBLEScan;
 
@@ -64,6 +67,9 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char *pcTaskName)
 ///////////////////////////////////////////////////////////////////////////
 //   BLUETOOTH
 ///////////////////////////////////////////////////////////////////////////
+
+int actual_MIN_BLE_rssiValue = MIN_BLE_rssiValue;
+
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
 
@@ -84,6 +90,12 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 
     int RSSI = advertisedDevice.getRSSI();
 
+    if (RSSI < actual_MIN_BLE_rssiValue){
+      // device too far 
+      // DEBUG_PRINTF("INFO: device ignored , Address: %s , RSSI: %d\n", address, RSSI);
+      too_far_devices ++;
+      return;
+    } 
     CRITICALSECTION_WRITESTART(trackedDevicesMutex)
     for (auto &trackedDevice : BLETrackedDevices)
     {
@@ -109,7 +121,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
             trackedDevice.connectionRetry = 0;
             FastDiscovery[trackedDevice.address] = true;
             DEBUG_PRINTF("INFO: Tracked device discovered again, Address: %s , RSSI: %d\n", address, RSSI);
-            if (advertisedDevice.haveName())
+           if (advertisedDevice.haveName())
             {
               LOG_TO_FILE_D("Device %s ( %s ) within range, RSSI: %d ", address, shortName, RSSI);
             }
@@ -147,7 +159,9 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 #endif
     CRITICALSECTION_WRITEEND;
 
-    DEBUG_PRINTF("INFO: Device discovered, Address: %s , RSSI: %d\n", address, RSSI);
+    DEBUG_PRINTF("INFO: Device discovered, Address: %2s:%2s:%2s:%2s , RSSI: %d\n", address, &address[2], &address[4], &address[6] , RSSI);
+ 
+ 
     if (advertisedDevice.haveName())
       LOG_TO_FILE_D("Discovered new device %s ( %s ) within range, RSSI: %d ", address, shortName, RSSI);
     else
@@ -186,7 +200,7 @@ void ForceBatteryRead(const char *normalizedAddr)
 
 void batteryTask()
 {
-  // DEBUG_PRINTF("\n*** Memory before battery scan: %u\n",xPortGetFreeHeapSize());
+   DEBUG_PRINTF("\n*** Memory before battery scan: %u\n",xPortGetFreeHeapSize());
 
   for (auto &trackedDevice : BLETrackedDevices)
   {
@@ -211,7 +225,7 @@ void batteryTask()
          (!batterySet && (BatteryRetryTimeout < now)) ||
          trackedDevice.forceBatteryRead))
     {
-      DEBUG_PRINTF("\nReading Battery level for %s: Retries: %d\n", trackedDevice.address, trackedDevice.connectionRetry);
+      DEBUG_PRINTF("Reading Battery level for %s: Retries: %d\n", trackedDevice.address, trackedDevice.connectionRetry);
       bool connectionEstablished = batteryLevel(trackedDevice.address, trackedDevice.addressType, trackedDevice.batteryLevel, trackedDevice.hasBatteryService);
       if (connectionEstablished || !trackedDevice.hasBatteryService)
       {
@@ -228,13 +242,13 @@ void batteryTask()
           trackedDevice.lastBattMeasureTime = now;
           // Report the error only one time if Log level info is set
           LOG_TO_FILE_E("Error: Connection to device %s failed", trackedDevice.address);
-          DEBUG_PRINTF("Error: Connection to device %s failed", trackedDevice.address);
+          DEBUG_PRINTF("Error: Connection to device %s failed\n", trackedDevice.address);
         }
         else
         {
           // Report the error every time if Log level debug or verbose is set
           LOG_TO_FILE_D("Error: Connection to device %s failed", trackedDevice.address);
-          DEBUG_PRINTF("Error: Connection to device %s failed", trackedDevice.address);
+          DEBUG_PRINTF("Error: Connection to device %s failed\n", trackedDevice.address);
         }
       }
     }
@@ -247,7 +261,7 @@ void batteryTask()
     trackedDevice.forceBatteryRead = false;
     Watchdog::Feed();
   }
-  // DEBUG_PRINTF("\n*** Memory after battery scan: %u\n",xPortGetFreeHeapSize());
+   DEBUG_PRINTF("\n*** Memory after battery scan: %u\n",xPortGetFreeHeapSize());
 }
 
 bool batteryLevel(const char address[ADDRESS_STRING_SIZE], esp_ble_addr_type_t addressType, int8_t &battLevel, bool &hasBatteryService)
@@ -372,8 +386,12 @@ void setup()
 #if defined(DEBUG_SERIAL)
   Serial.begin(115200);
 #endif
+ 
+  DEBUG_PRINTF("start BLE tracker %s", Firmware::FullVersion());
 
-  Serial.println("INFO: Running setup");
+  DEBUG_PRINTF("*** SETUP begin Memory available : %u\n",xPortGetFreeHeapSize());
+
+  LogResetReason();
 
 #if defined(_SPIFFS_H_)
   if (!SPIFFS.begin())
@@ -382,6 +400,7 @@ void setup()
       DEBUG_PRINTLN("Failed to initialize SPIFFS");
   }
 #endif
+ DEBUG_PRINTF("*** SETUP after SPIFFS Memory available : %u\n",xPortGetFreeHeapSize());
 
 #if ERASE_DATA_AFTER_FLASH
   int dataErased = 0; // 0 -> Data erased not performed
@@ -404,6 +423,7 @@ void setup()
   SPIFFSLogger.Initialize("/logs.bin", MAX_NUM_OF_SAVED_LOGS);
   SPIFFSLogger.setLogLevel(SPIFFSLoggerClass::LogLevel(SettingsMngr.logLevel));
 #endif
+DEBUG_PRINTF("*** SETUP after SPIFFS 2 Memory available : %u\n",xPortGetFreeHeapSize());
 
   if (SettingsMngr.wifiSSID.isEmpty())
   {
@@ -413,8 +433,7 @@ void setup()
   {
     WiFiConnect(SettingsMngr.wifiSSID, SettingsMngr.wifiPwd);
   }
-
-  LogResetReason();
+DEBUG_PRINTF("*** SETUP after WIFI Memory available : %u\n",xPortGetFreeHeapSize());
 
 #if ERASE_DATA_AFTER_FLASH
   if (dataErased == 1)
@@ -427,6 +446,7 @@ void setup()
   webserver.setup(SettingsMngr.gateway, SettingsMngr.wifiSSID, SettingsMngr.wifiPwd);
   webserver.begin();
 #endif
+DEBUG_PRINTF("*** SETUP after WEBSERVER Memory available : %u\n",xPortGetFreeHeapSize());
 
   BLETrackedDevices.reserve(SettingsMngr.GetMaxNumOfTraceableDevices());
   for (const auto &dev : SettingsMngr.GetKnownDevicesList())
@@ -436,11 +456,11 @@ void setup()
     trackedDevice.forceBatteryRead = dev.readBattery;
     BLETrackedDevices.push_back(std::move(trackedDevice));
   }
+DEBUG_PRINTF("*** SETUP after reserve Memory available : %u\n",xPortGetFreeHeapSize());
 
   Watchdog::Initialize();
-
-  if (!IsAccessPointModeOn())
-  {
+///// WTF
+  DEBUG_PRINTLN("Initiate BLE scan"); 
     BLEDevice::init(SettingsMngr.gateway.c_str());
     pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks(), NUM_OF_ADVERTISEMENT_IN_SCAN > 1);
@@ -448,6 +468,12 @@ void setup()
     pBLEScan->setInterval(50);
     pBLEScan->setWindow(50);
 
+    esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
+
+DEBUG_PRINTF("*** SETUP after BT Memory available : %u\n",xPortGetFreeHeapSize());
+
+ if (!IsAccessPointModeOn())
+  {
 #if USE_MQTT
     initializeMQTT();
     connectToMQTT();
@@ -494,7 +520,7 @@ void loop()
 
     Serial.println("INFO: Running mainloop");
     DEBUG_PRINTF("Main loop Free heap: %u\n", xPortGetFreeHeapSize());
-    DEBUG_PRINTF("Number device discovered: %d\n", BLETrackedDevices.size());
+    DEBUG_PRINTF("Number device discovered: %d ignored: %d\n", BLETrackedDevices.size(),too_far_devices);
 
     if (BLETrackedDevices.size() == SettingsMngr.GetMaxNumOfTraceableDevices())
     {
@@ -503,7 +529,7 @@ void loop()
       esp_restart();
     }
 
-    if (!IsAccessPointModeOn())
+    if (!IsAccessPointModeOn() || true)  //  WTF
     {
 #if PROGRESSIVE_SCAN
       bool scanCompleted = false;
@@ -520,10 +546,11 @@ void loop()
         if (!continuePrevScan) // new scan
         {
           // Reset the states of discovered devices
+          too_far_devices=0;
           for (auto &trackedDevice : BLETrackedDevices)
           {
             trackedDevice.advertised = false;
-            trackedDevice.rssiValue = -100;
+            trackedDevice.rssiValue = MIN_BLE_rssiValue;
             trackedDevice.advertisementCounter = 0;
           }
         }
@@ -540,18 +567,19 @@ void loop()
         }
 #else
         // Reset the states of discovered devices
+        too_far_devices=0;
         for (auto &trackedDevice : BLETrackedDevices)
         {
           trackedDevice.advertised = false;
-          trackedDevice.rssiValue = -100;
+          trackedDevice.rssiValue = MIN_BLE_rssiValue;
           trackedDevice.advertisementCounter = 0;
         }
 
-        // DEBUG_PRINTF("\n*** Memory Before scan: %u\n",xPortGetFreeHeapSize());
+        DEBUG_PRINTF("\n*** Memory Before scan: %u\n",xPortGetFreeHeapSize());
         pBLEScan->start(SettingsMngr.scanPeriod);
         pBLEScan->stop();
         pBLEScan->clearResults();
-        // DEBUG_PRINTF("\n*** Memory After scan: %u\n",xPortGetFreeHeapSize());
+        DEBUG_PRINTF("\n*** Memory After scan: %u\n",xPortGetFreeHeapSize());
 #endif
       }
       else
@@ -559,7 +587,7 @@ void loop()
         for (auto &trackedDevice : BLETrackedDevices)
         {
           trackedDevice.advertised = false;
-          trackedDevice.rssiValue = -100;
+          trackedDevice.rssiValue = MIN_BLE_rssiValue;
           trackedDevice.advertisementCounter = 0;
         }
         pBLEScan->clearResults();

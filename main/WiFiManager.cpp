@@ -28,25 +28,27 @@ WiFiMode GetWifiMode()
 void StartAccessPointMode()
 {
     // Enable Access Point Mode
-    DEBUG_PRINT("Starting AccessPoint Mode...");
+    DEBUG_PRINTLN("Starting AccessPoint Mode...");
     IPAddress local_ip(192,168,2,1);
     IPAddress gateway(192,168,2,1);
     IPAddress subnet(255,255,255,0);
     WiFi.mode(WIFI_AP);
     WiFi.softAPConfig(local_ip, gateway, subnet);
-    WiFi.softAP("ESP32_BLETRACKER", nullptr);
+    WiFi.softAP(WIFIAP_NAME, nullptr);
     gWiFiMode = WiFiMode::AcessPoint;
-    DEBUG_PRINT("AccessPoint Mode enabled.");
+    DEBUG_PRINTLN("AccessPoint Mode enabled.");
 }
 
 void WiFiConnect(const String &_ssid_, const String &_password_)
 {
+  unsigned long timeout ;
+
   if (WiFi.status() != WL_CONNECTED && !_ssid_.isEmpty() && gWiFiMode != WiFiMode::AcessPoint)
   {
-    DEBUG_PRINTF("Connecting to WiFi %s...", _ssid_.c_str());
+    DEBUG_PRINTF("Connecting to WiFi %s... for %ds mode %d\n", _ssid_.c_str(),WIFI_CONNECTION_TIME_OUT, gWiFiMode);
     esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
     // Connect to WiFi network
-     WiFi.enableAP(false);
+    WiFi.enableAP(false);
     WiFi.mode(WIFI_STA);
     WiFi.disconnect(true);
     
@@ -64,19 +66,19 @@ void WiFiConnect(const String &_ssid_, const String &_password_)
     }
     #endif/*!USE_DHCP*/
 
+   
     WiFi.begin(_ssid_.c_str(), _password_.c_str());
-    DEBUG_PRINTLN("");
-
-    unsigned long timeout = NTPTime::seconds() + (WIFI_CONNECTION_TIME_OUT * (gWiFiMode == WiFiMode::Initializing) ? 3 : 1);
+   
+    timeout = NTPTime::seconds() + (WIFI_CONNECTION_TIME_OUT *( (gWiFiMode == WiFiMode::Initializing) ? 3 : 1));
     // Wait for connection
     while (WiFi.status() != WL_CONNECTED)
     {
       delay(500);
       DEBUG_PRINTLN(".");
 
-      if (NTPTime::seconds() > timeout)
+      if (NTPTime::seconds()  > timeout)
       {
-        DEBUG_PRINTLN("Failed connecting to the network: timeout error!!!");
+        DEBUG_PRINTF("Failed connecting to the network: timeout error!!! %lu \n",timeout);
         LOG_TO_FILE_E("Start AccessPoint: failed to connect to %s.",_ssid_.c_str());
         WiFi.enableAP(true);
         StartAccessPointMode();
@@ -96,9 +98,9 @@ void WiFiConnect(const String &_ssid_, const String &_password_)
     //Initialize the time getting it from the WEB We do it after we have WifFi connection
     NTPTime::initialize(SettingsMngr.wbsTimeZone.c_str());
 
-    DEBUG_PRINTLN("--------------------");
     DEBUG_PRINTF("Connected to %s\n",_ssid_.c_str());
     DEBUG_PRINTF("IP address: %s\n",WiFi.localIP().toString().c_str());
+    DEBUG_PRINTLN("--------------------");
     LOG_TO_FILE_I("Connected to %s",_ssid_.c_str());
   }
 }

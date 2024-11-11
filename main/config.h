@@ -11,7 +11,7 @@
 //Active scanners respond to every device they hear from, asking if they have more data to send.
 //Generally, passive scans are enough and use less power than active scans, so are the best option.
 //Active scans are only necessary if you encounter strange issues i.e. the Tracker discovers devices when they are not present.
-#define ACTIVE_SCAN     false
+#define ACTIVE_SCAN     true
 
 //Scanning to discover devices is performed every BLE_SCANNING_PERIOD seconds
 #define BLE_SCANNING_PERIOD   10    /*10 s*/
@@ -21,16 +21,18 @@
 
 //The device's battery is read every BATTERY_READ_PERIOD seconds
 //If the battery value's is not read after BATTERY_READ_PERIOD it becomes unknown
-#define BATTERY_READ_PERIOD    43200 /*12h -> 12h*60m*60s*/
+#define BATTERY_READ_PERIOD    3600 /*12h -> 12h*60m*60s*/
 
 //In case of failure reading the battery's value we retry after BATTERY_RETRY_PERIOD seconds
-#define BATTERY_RETRY_PERIOD    3600 /*1h -> 60m*60s*/
+#define BATTERY_RETRY_PERIOD    360 /*1h -> 60m*60s*/
 
 //Retries to read the battery level if connections fails before to give up until BATTERY_RETRY_PERIOD expires
 #define MAX_BLE_CONNECTION_RETRIES 3
 
+#define MIN_BLE_rssiValue -80
+
 // Debug output
-//#define DEBUG_SERIAL
+#define DEBUG_SERIAL
 
 
 #define PUBLISH_BATTERY_LEVEL       true
@@ -70,13 +72,13 @@
 #define PROGRESSIVE_SCAN false
 #endif
 
-#define ENABLE_OTA_WEBSERVER    true
+#define ENABLE_OTA_WEBSERVER    false
 
 #define WIFI_CONNECTION_TIME_OUT  30 /*30 seconds*/
 
 //Print more data in the System Info page
 #ifndef DEVELOPER_MODE
-#define DEVELOPER_MODE false
+#define DEVELOPER_MODE true
 #endif
 
 //Erase all the persistent data at the first execution just after the new firmware is uploaded
