@@ -7,7 +7,7 @@
 // Wi-Fi credentials
 // NOTE: If you set them the WiFi credential AcessPoint Mode will not work and BLETracker will connect always to this WiFi
 #define WIFI_SSID     "NO-THO-40"
-#define WIFI_PASSWORD "4d8233a767"
+#define WIFI_PASSWORD ""
 
 /*Set to false to assign manually an IP to the BLETracker*/
 #define USE_DHCP true
@@ -42,6 +42,7 @@
 //Each block is coma separated
 //In example
 //#define BLE_KNOWN_DEVICES_LIST  {"AABBCCDDEEFF", true, "Nut"}, {"A1B2C3D4E5F6", false, "iTag"}, {"1A2B3C4D5E6F", false, ""}
+//#define BLE_KNOWN_DEVICES_LIST  {"43F7902607DAF", true, "ST velo"}, {"FFB3D6DAC9F2", false, "NTag"}, {"FFFF118BD254", true, "iTag1"}, {"FFFF118D4844", true, "iTag2"} , {"CF93F293262F", true, "i*AirTagclef"} 
 #define BLE_KNOWN_DEVICES_LIST  
 
 //NTP Server configurations
