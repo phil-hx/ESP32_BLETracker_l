@@ -9,7 +9,7 @@
 #include "myRWMutex.h"
 #define ADDRESS_STRING_SIZE 13
 #define DESCRIPTION_STRING_SIZE 21
-
+#define MAX_Dname 8
 struct BLETrackedDevice
 {
   char address[ADDRESS_STRING_SIZE];
@@ -24,6 +24,7 @@ struct BLETrackedDevice
   esp_ble_addr_type_t addressType;
   uint8_t advertisementCounter;
   bool forceBatteryRead;
+  char dshortName [MAX_Dname+1];
 
   BLETrackedDevice()
   {
@@ -39,6 +40,7 @@ struct BLETrackedDevice
     addressType = BLE_ADDR_TYPE_PUBLIC;
     advertisementCounter = 0;
     forceBatteryRead = true;
+    dshortName[0] = '\0';
   }
 };
 

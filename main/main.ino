@@ -77,25 +77,27 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
   {
     Watchdog::Feed();
     const uint8_t shortNameSize = 31;
-    char address[ADDRESS_STRING_SIZE];
+    char address[ADDRESS_STRING_SIZE],Caddress[ADDRESS_STRING_SIZE+5];
     NormalizeAddress(*(advertisedDevice.getAddress().getNative()), address);
+    CanonicalAddress(address,Caddress );
 
     if (!SettingsMngr.IsTraceable(address))
       return;
+
+    int RSSI = advertisedDevice.getRSSI();
+
+    if (RSSI < actual_MIN_BLE_rssiValue){
+      // device too far 
+      // DEBUG_PRINTF("INFO: device ignored , Address: %s , RSSI: %d\n", Caddress, RSSI);
+      too_far_devices ++;
+      return;
+    } 
 
     char shortName[shortNameSize];
     memset(shortName, 0, shortNameSize);
     if (advertisedDevice.haveName())
       strncpy(shortName, advertisedDevice.getName().c_str(), shortNameSize - 1);
 
-    int RSSI = advertisedDevice.getRSSI();
-
-    if (RSSI < actual_MIN_BLE_rssiValue){
-      // device too far 
-      // DEBUG_PRINTF("INFO: device ignored , Address: %s , RSSI: %d\n", address, RSSI);
-      too_far_devices ++;
-      return;
-    } 
     CRITICALSECTION_WRITESTART(trackedDevicesMutex)
     for (auto &trackedDevice : BLETrackedDevices)
     {
@@ -120,17 +122,17 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
             trackedDevice.isDiscovered = true;
             trackedDevice.connectionRetry = 0;
             FastDiscovery[trackedDevice.address] = true;
-            DEBUG_PRINTF("INFO: Tracked device discovered again, Address: %s , RSSI: %d\n", address, RSSI);
+            DEBUG_PRINTF("INFO: Tracked device discovered again, Address: %s , RSSI: %d (%s)\n", Caddress, RSSI, shortName);
            if (advertisedDevice.haveName())
             {
-              LOG_TO_FILE_D("Device %s ( %s ) within range, RSSI: %d ", address, shortName, RSSI);
+              LOG_TO_FILE_D("Device %s ( %s ) within range, RSSI: %d ", Caddress, shortName, RSSI);
             }
             else
-              LOG_TO_FILE_D("Device %s within range, RSSI: %d ", address, RSSI);
+              LOG_TO_FILE_D("Device %s within range, RSSI: %d ", Caddress, RSSI);
           }
           else
           {
-            DEBUG_PRINTF("INFO: Tracked device discovered, Address: %s , RSSI: %d\n", address, RSSI);
+            DEBUG_PRINTF("INFO: Tracked device discovered, Address: %s , RSSI: %d ()\n", Caddress,  RSSI, shortName);
           }
         }
         return;
@@ -150,6 +152,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
     trackedDevice.connectionRetry = 0;
     trackedDevice.rssiValue = RSSI;
     trackedDevice.advertisementCounter = 1;
+    strncpy(trackedDevice.dshortName, shortName, MAX_Dname);trackedDevice.dshortName[MAX_Dname]='\0';
+
     BLETrackedDevices.push_back(std::move(trackedDevice));
     FastDiscovery[trackedDevice.address] = true;
 #if NUM_OF_ADVERTISEMENT_IN_SCAN > 1
@@ -159,13 +163,13 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 #endif
     CRITICALSECTION_WRITEEND;
 
-    DEBUG_PRINTF("INFO: Device discovered, Address: %2s:%2s:%2s:%2s , RSSI: %d\n", address, &address[2], &address[4], &address[6] , RSSI);
+    DEBUG_PRINTF("INFO: Device discovered, Address: %s , RSSI: %d (%s)\n", Caddress, RSSI,shortName);
  
  
     if (advertisedDevice.haveName())
-      LOG_TO_FILE_D("Discovered new device %s ( %s ) within range, RSSI: %d ", address, shortName, RSSI);
+      LOG_TO_FILE_D("Discovered new device  %s ( %s ) within range, RSSI: %d ", Caddress,  shortName, RSSI);
     else
-      LOG_TO_FILE_D("Discovered new device %s within range, RSSI: %d ", address, RSSI);
+      LOG_TO_FILE_D("Discovered new device %s  within range, RSSI: %d ", Caddress,  RSSI);
   }
 };
 
@@ -219,36 +223,39 @@ void batteryTask()
     unsigned long BatteryReadTimeout = trackedDevice.lastBattMeasureTime + BATTERY_READ_PERIOD;
     unsigned long BatteryRetryTimeout = trackedDevice.lastBattMeasureTime + BATTERY_RETRY_PERIOD;
     unsigned long now = NTPTime::getTimeStamp();
+    char Caddress[ADDRESS_STRING_SIZE+5];
+    CanonicalAddress(trackedDevice.address,Caddress );
     bool batterySet = trackedDevice.batteryLevel > 0;
     if (trackedDevice.advertised && trackedDevice.hasBatteryService && trackedDevice.rssiValue > -90 &&
         ((batterySet && (BatteryReadTimeout < now)) ||
          (!batterySet && (BatteryRetryTimeout < now)) ||
          trackedDevice.forceBatteryRead))
     {
-      DEBUG_PRINTF("Reading Battery level for %s: Retries: %d\n", trackedDevice.address, trackedDevice.connectionRetry);
       bool connectionEstablished = batteryLevel(trackedDevice.address, trackedDevice.addressType, trackedDevice.batteryLevel, trackedDevice.hasBatteryService);
       if (connectionEstablished || !trackedDevice.hasBatteryService)
       {
         log_i("Device %s has battery service: %s", trackedDevice.address, trackedDevice.hasBatteryService ? "YES" : "NO");
+        DEBUG_PRINTF("Reading Battery level for %s (%s): Retries: %d %s\n", Caddress, trackedDevice.dshortName,
+            trackedDevice.connectionRetry, trackedDevice.hasBatteryService ? "YES" : "NO");
+ 
         trackedDevice.connectionRetry = 0;
         trackedDevice.lastBattMeasureTime = now;
       }
       else
       {
         trackedDevice.connectionRetry++;
-        if (trackedDevice.connectionRetry >= MAX_BLE_CONNECTION_RETRIES)
+        DEBUG_PRINTF("Error: Connection to device %s (%s) failed\n", Caddress, trackedDevice.dshortName);
+       if (trackedDevice.connectionRetry >= MAX_BLE_CONNECTION_RETRIES)
         {
           trackedDevice.connectionRetry = 0;
           trackedDevice.lastBattMeasureTime = now;
           // Report the error only one time if Log level info is set
           LOG_TO_FILE_E("Error: Connection to device %s failed", trackedDevice.address);
-          DEBUG_PRINTF("Error: Connection to device %s failed\n", trackedDevice.address);
-        }
+         }
         else
         {
           // Report the error every time if Log level debug or verbose is set
           LOG_TO_FILE_D("Error: Connection to device %s failed", trackedDevice.address);
-          DEBUG_PRINTF("Error: Connection to device %s failed\n", trackedDevice.address);
         }
       }
     }
@@ -306,6 +313,7 @@ bool batteryLevel(const char address[ADDRESS_STRING_SIZE], esp_ble_addr_type_t a
           battLevel = (int8_t)value[0];
         log_i("Reading BATTERY level : %d", battLevel);
         LOG_TO_FILE_I("Battery level for device %s is %d", address, battLevel);
+        DEBUG_PRINTF("INFO: battery level for  Address: %s , level : %d \n", address, battLevel);
         hasBatteryService = true;
       }
     }
@@ -387,7 +395,7 @@ void setup()
   Serial.begin(115200);
 #endif
  
-  DEBUG_PRINTF("start BLE tracker %s", Firmware::FullVersion());
+  // DEBUG_PRINTF("start BLE tracker %s", Firmware::FullVersion());
 
   DEBUG_PRINTF("*** SETUP begin Memory available : %u\n",xPortGetFreeHeapSize());
 
@@ -460,7 +468,6 @@ DEBUG_PRINTF("*** SETUP after reserve Memory available : %u\n",xPortGetFreeHeapS
 
   Watchdog::Initialize();
 ///// WTF
-  DEBUG_PRINTLN("Initiate BLE scan"); 
     BLEDevice::init(SettingsMngr.gateway.c_str());
     pBLEScan = BLEDevice::getScan();
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks(), NUM_OF_ADVERTISEMENT_IN_SCAN > 1);
@@ -469,8 +476,16 @@ DEBUG_PRINTF("*** SETUP after reserve Memory available : %u\n",xPortGetFreeHeapS
     pBLEScan->setWindow(50);
 
     esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
+    uint8_t baseMac[6];
+    esp_read_mac(baseMac, ESP_MAC_BT);
+    Serial.print("Bluetooth MAC: ");
+    for (int i = 0; i < 5; i++) {
+      Serial.printf("%02X:", baseMac[i]);
+    }
+    Serial.printf("%02X\n", baseMac[5]);
+    DEBUG_PRINTF("Initiate BLE scan with MAc %02X:%02X:%02X:%02X:%02X:%02X \n",baseMac[0],baseMac[1],baseMac[2],baseMac[3],baseMac[4],baseMac[5]); 
 
-DEBUG_PRINTF("*** SETUP after BT Memory available : %u\n",xPortGetFreeHeapSize());
+  DEBUG_PRINTF("*** SETUP after BT Memory available : %u\n",xPortGetFreeHeapSize());
 
  if (!IsAccessPointModeOn())
   {

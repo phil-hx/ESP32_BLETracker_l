@@ -114,7 +114,7 @@ void Settings::FactoryReset(bool emptyLists)
 
 std::size_t Settings::GetMaxNumOfTraceableDevices()
 {
-    const std::size_t absoluteMaxNumOfTraceableDevices = 90;
+    const std::size_t absoluteMaxNumOfTraceableDevices = 80;
     const std::size_t minNumOfTraceableDevices = std::min(knownDevices.size() + 1, absoluteMaxNumOfTraceableDevices);
     return enableWhiteList ? minNumOfTraceableDevices : absoluteMaxNumOfTraceableDevices;
 }
