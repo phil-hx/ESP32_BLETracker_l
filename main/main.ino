@@ -34,6 +34,8 @@
 
 #include "NTPTime.h"
 
+#include "battery_level.h"
+
 MyRWMutex trackedDevicesMutex;
 std::vector<BLETrackedDevice> BLETrackedDevices;
 std::map<std::string, bool> FastDiscovery;
@@ -47,6 +49,8 @@ unsigned long lastSySInfoTime = 0;
 #if ENABLE_OTA_WEBSERVER
 OTAWebServer webserver;
 #endif
+
+#define LED_BUILTIN GPIO_NUM_13
 
 extern "C"
 {
@@ -400,6 +404,11 @@ void setup()
   DEBUG_PRINTF("*** SETUP begin Memory available : %u\n",xPortGetFreeHeapSize());
 
   LogResetReason();
+  
+  pinMode(LED_BUILTIN, OUTPUT);
+
+         
+  float battery_voltage = battery_level::battery_voltage() ;
 
 #if defined(_SPIFFS_H_)
   if (!SPIFFS.begin())
@@ -408,7 +417,7 @@ void setup()
       DEBUG_PRINTLN("Failed to initialize SPIFFS");
   }
 #endif
- DEBUG_PRINTF("*** SETUP after SPIFFS Memory available : %u\n",xPortGetFreeHeapSize());
+ DEBUG_PRINTF("*** SETUP after SPIFFS Memory available : %u battery %.2f \n",xPortGetFreeHeapSize(),battery_voltage);
 
 #if ERASE_DATA_AFTER_FLASH
   int dataErased = 0; // 0 -> Data erased not performed
@@ -532,9 +541,10 @@ void loop()
 #endif
 
     Watchdog::Feed();
-
+    digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
+    
     Serial.println("INFO: Running mainloop");
-    DEBUG_PRINTF("Main loop Free heap: %u\n", xPortGetFreeHeapSize());
+    DEBUG_PRINTF("Main loop Free heap: %u, battery %f  uptime %d \n", xPortGetFreeHeapSize(), battery_level::battery_voltage(), esp_timer_get_time()/1000000);
     DEBUG_PRINTF("Number device discovered: %d ignored: %d\n", BLETrackedDevices.size(),too_far_devices);
 
     if (BLETrackedDevices.size() == SettingsMngr.GetMaxNumOfTraceableDevices())
@@ -583,6 +593,7 @@ void loop()
 #else
         // Reset the states of discovered devices
         too_far_devices=0;
+
         for (auto &trackedDevice : BLETrackedDevices)
         {
           trackedDevice.advertised = false;
@@ -595,6 +606,7 @@ void loop()
         pBLEScan->stop();
         pBLEScan->clearResults();
         DEBUG_PRINTF("\n*** Memory After scan: %u\n",xPortGetFreeHeapSize());
+
 #endif
       }
       else
@@ -621,6 +633,7 @@ void loop()
           LOG_TO_FILE_D("Devices %s is gone out of range", trackedDevice.address);
         }
       }
+    digitalWrite(LED_BUILTIN, LOW);  // turn the LED off
 
 #if PUBLISH_BATTERY_LEVEL
 #if PROGRESSIVE_SCAN
