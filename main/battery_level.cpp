@@ -1,7 +1,7 @@
 #include "battery_level.h"
 
 //#include <stdlib.h>
-#include <esp32-hal.h>>
+#include <esp32-hal.h>
 
 
 #define ADC_PIN 35
