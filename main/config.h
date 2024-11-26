@@ -74,7 +74,7 @@
 #define PROGRESSIVE_SCAN false
 #endif
 
-//#define ENABLE_OTA_WEBSERVER    true
+#define ENABLE_OTA_WEBSERVER    true
 
 #define WIFI_CONNECTION_TIME_OUT  12 /*30 seconds*/
 
