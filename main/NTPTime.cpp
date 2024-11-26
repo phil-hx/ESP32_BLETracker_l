@@ -40,7 +40,7 @@ namespace NTPTime
     {
         while (NPTIMEInitializing)
             delay(10);
-        ::getLocalTime(&timeinfo);
+        ::getLocalTime(&timeinfo, 0 ); // do not wait for time to be initialized
     }
 
     time_t getTimeStamp()

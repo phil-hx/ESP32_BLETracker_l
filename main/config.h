@@ -31,8 +31,10 @@
 
 #define MIN_BLE_rssiValue -80
 
-// Debug output
-#define DEBUG_SERIAL
+// Debug output ; done in build flags
+#ifndef DEBUG_SERIAL
+#define DEBUG_SERIAL   
+#endif
 
 
 #define PUBLISH_BATTERY_LEVEL       true
@@ -72,9 +74,9 @@
 #define PROGRESSIVE_SCAN false
 #endif
 
-#define ENABLE_OTA_WEBSERVER    false
+//#define ENABLE_OTA_WEBSERVER    true
 
-#define WIFI_CONNECTION_TIME_OUT  30 /*30 seconds*/
+#define WIFI_CONNECTION_TIME_OUT  12 /*30 seconds*/
 
 //Print more data in the System Info page
 #ifndef DEVELOPER_MODE

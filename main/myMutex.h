@@ -1,9 +1,9 @@
 #ifndef MYMUTEX_H
 #define MYMUTEX_H
 #include "freertos/FreeRTOS.h"
-#include "DebugPrint.h"
-#include <WString.h>
-#include <esp32-hal-log.h>
+//#include "DebugPrint.h"
+//#include <WString.h>
+//#include <esp32-hal-log.h>
 
 class MyMutex
 {

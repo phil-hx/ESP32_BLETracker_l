@@ -5,8 +5,10 @@
 
 
 #define ADC_PIN 35
-#define vref  1100
+//#define vref  1100
+#define vref  1032
 
+#define correction_factor 4.26 / 4.54
 
 
 float battery_level::battery_voltage(){

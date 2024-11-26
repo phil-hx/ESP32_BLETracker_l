@@ -4,6 +4,7 @@
 #include <WString.h>
 #include <vector>
 #include "main.h"
+#include "utility.h"
 
 enum eManualSCanMode
 {

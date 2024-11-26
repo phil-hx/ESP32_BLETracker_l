@@ -2,11 +2,12 @@
 #define OTA_WEB_SERVER
 #include <WebServer.h>
 #include "myMutex.h"
+#include "ble_manager.h"
 
 class OTAWebServer
 {
 public:
-    OTAWebServer();
+    OTAWebServer(ble_manager* blem);
     void setup(const String &hostName, const String &ssid, const String &password);
     void begin(void);
 
@@ -48,5 +49,6 @@ private:
     String password;
     bool serverRunning;
     MyMutex dataBuffMutex;
+    ble_manager* myBLE;
 };
 #endif /*OTA_WEB_SERVER*/

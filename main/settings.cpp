@@ -1,6 +1,7 @@
 #include "settings.h"
 #include "config.h"
 #include "DebugPrint.h"
+#include "utility.h"
 
 #define CURRENT_SETTING_VERSION 7
 
@@ -79,6 +80,7 @@ void Settings::StringListToArray(const String &whiteList, std::vector<String> &v
 
 Settings::Settings(const String &fileName, bool emptyLists) : settingsFile(fileName), version(CURRENT_SETTING_VERSION)
 {
+    //DEBUG_PRINTLN("Create settings\n");
     FactoryReset(emptyLists);
 };
 
@@ -110,6 +112,8 @@ void Settings::FactoryReset(bool emptyLists)
     wbsUser = WEBSERVER_USER;
     wbsPwd = WEBSERVER_PASSWORD;
     wbsTimeZone = TIME_ZONE;
+    //DEBUG_PRINTF(" settings reset %s\n" , gateway);
+
 }
 
 std::size_t Settings::GetMaxNumOfTraceableDevices()
@@ -398,7 +402,7 @@ void Settings::Load()
             LoadString(file, wifiPwd);
             LoadString(file, gateway);
             LoadString(file, wbsTimeZone);
-            DEBUG_PRINTF("loaded TZ %s\n",wbsTimeZone.c_str());
+            //DEBUG_PRINTF("loaded TZ %s\n",wbsTimeZone.c_str());
         }
     }
 }

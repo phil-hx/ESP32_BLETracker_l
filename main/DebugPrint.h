@@ -1,6 +1,8 @@
 #include <mutex>
 #include "config.h"
 #include "NTPTime.h"
+
+
 extern char _printbuffer_[256];
 extern std::mutex _printLock_;
 #if defined(DEBUG_SERIAL)
@@ -38,9 +40,11 @@ extern std::mutex _printLock_;
 #define DEBUG_PRINTLN(x)
 #define DEBUG_PRINTF(x, ...)
 #endif
+
 #define SERIAL_PRINTF(x, ...)                                           \
     {                                                                   \
         std::lock_guard<std::mutex> lock(_printLock_);                  \
         snprintf(_printbuffer_, sizeof(_printbuffer_), x, __VA_ARGS__); \
         Serial.print(_printbuffer_);                                    \
     }
+

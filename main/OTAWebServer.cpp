@@ -17,7 +17,9 @@
 #include "settings.h"
 #include "SPIFFSLogger.h"
 
-extern std::vector<BLETrackedDevice> BLETrackedDevices;
+//WTF
+#include "ble_manager.h"
+// std::vector<BLETrackedDevice> BLETrackedDevices;
 
 #include "html/style.css.gz.h"
 #include "html/index.html.gz.h"
@@ -35,10 +37,11 @@ extern std::vector<BLETrackedDevice> BLETrackedDevices;
 #include "html/otaupdate.html.gz.h"
 #include "html/otaupdate.js.gz.h"
 
-OTAWebServer::OTAWebServer()
+OTAWebServer::OTAWebServer(ble_manager* blem)
     : server(80),
       dataBuffMutex("OTAWebServer_DataBuffer")
 {
+  myBLE = blem;
 }
 
 const size_t maxdatasize = 5 * 1024; //5Kb
@@ -358,7 +361,7 @@ void OTAWebServer::getUpdateBattery()
   if (server.hasArg("mac"))
   {
     DEBUG_PRINTF("Force Battery Update for: %s\n", server.arg("mac").c_str());
-    ForceBatteryRead(server.arg("mac").c_str());
+    myBLE->ForceBatteryRead(server.arg("mac").c_str());
   }
 
   server.client().setNoDelay(true);
@@ -484,7 +487,7 @@ void OTAWebServer::getSysInfoData()
   SendChunkedContent(R"("devices":[)");
 
   bool first = true;
-  for (auto &trackedDevice : BLETrackedDevices)
+  for (auto &trackedDevice : myBLE->BLETrackedDevices)
   {
     if (first)
       first = false;
