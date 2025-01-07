@@ -11,8 +11,7 @@
 #include <EEPROM.h>
 #define CONFIG_ESP32_DEBUG_OCDAWARE 1
 
-#include "esp_system.h"
-#include "DebugPrint.h"
+ #include "DebugPrint.h"
 
 #if ENABLE_OTA_WEBSERVER
 #include "OTAWebServer.h"
@@ -46,9 +45,9 @@ unsigned long lastSySInfoTime = 0;
 OTAWebServer *pwebserver;
 #endif
 
-//#ifndef LED_BUILTIN
+#ifndef LED_BUILTIN
 #define LED_BUILTIN GPIO_NUM_13
-//#endif
+#endif
 
 unsigned long EXt_mem =0;
 
@@ -189,6 +188,7 @@ DEBUG_PRINTF("*** SETUP after WEBSERVER Memory available : %u\n",xPortGetFreeHea
   LOG_TO_FILE("BLETracker initialized");
 }
 
+
 char *formatMillis(unsigned long milliseconds, char outstr[20])
 {
   unsigned long seconds = milliseconds / 1000;
@@ -198,6 +198,7 @@ char *formatMillis(unsigned long milliseconds, char outstr[20])
   snprintf(outstr, 20, "%d.%02d:%02d:%02d", days, hours % 24, minutes % 60, seconds % 60);
   return outstr;
 }
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
