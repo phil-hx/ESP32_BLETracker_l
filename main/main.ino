@@ -82,9 +82,15 @@ void setup()
 {
 #if defined(DEBUG_SERIAL)
   Serial.begin(115200);
+#if defined(ARDUINO_C3_SUPERMINI) 
+  sleep(2); // for ESP32 C3 , use of interna USB, need some time for desktop to connect to it.
+#endif
+if (ARDUINO_C3_SUPERMINI) sleep(2); 
 #endif
  
   DEBUG_PRINTF("start BLE tracker %s\n", Firmware::FullVersion().c_str());
+
+  if (ARDUINO_BOARD) {DEBUG_PRINTF("Board version %s (%u)\n", ARDUINO_BOARD, LED_BUILTIN)};
   
   EXt_mem= xPortGetFreeHeapSize()-esp_get_free_internal_heap_size();
 
@@ -225,9 +231,9 @@ void loop()
       WiFiConnect(SettingsMngr.wifiSSID, SettingsMngr.wifiPwd);
     }
 #endif
-
+ 
     Watchdog::Feed();
-    digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
+    digitalWrite(LED_BUILTIN, LOW);  // turn the LED on (HIGH is the voltage level)
     
     DEBUG_PRINTF("Main loop Free heap: %u, int %u, ext used %u battery %.2f  uptime %d \n", xPortGetFreeHeapSize() ,esp_get_free_internal_heap_size() , (EXt_mem+esp_get_free_internal_heap_size())-xPortGetFreeHeapSize(),
         battery_level::battery_voltage(), esp_timer_get_time()/1000000);
@@ -258,7 +264,7 @@ void loop()
 
 myBLE_manager->cleanList(SettingsMngr.maxNotAdvPeriod);
 
-digitalWrite(LED_BUILTIN, LOW);  // turn the LED off
+digitalWrite(LED_BUILTIN, HIGH);  // turn the LED off
 
 #if PUBLISH_BATTERY_LEVEL
 #if PROGRESSIVE_SCAN

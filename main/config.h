@@ -33,7 +33,7 @@
 
 // Debug output ; done in build flags
 #ifndef DEBUG_SERIAL
-#define DEBUG_SERIAL   
+//#define DEBUG_SERIAL   
 #endif
 
 

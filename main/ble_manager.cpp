@@ -312,8 +312,8 @@ DEBUG_PRINTF("Number device discovered: %d ignored: %d\n", NumDevicesTracked() ,
 
         DEBUG_PRINTF("*** Memory Before scan: %u\n",xPortGetFreeHeapSize());
         pBLEScan->start(SettingsMngr.scanPeriod);
-        pBLEScan->stop();
-        pBLEScan->clearResults();
+        // pBLEScan->stop();  // useless
+         pBLEScan->clearResults();
         DEBUG_PRINTF("*** Memory After scan: %u\n",xPortGetFreeHeapSize());
 
 #endif
